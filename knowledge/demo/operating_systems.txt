@@ -1,0 +1,23 @@
+Operating Systems - Demo Knowledge
+
+A process is a program in execution.
+
+A thread is the smallest unit of CPU execution within a process. Multiple
+threads belonging to the same process share resources such as memory,
+while each thread has its own stack and program counter.
+
+A race condition occurs when multiple threads access shared data
+concurrently and the final result depends on the order of execution.
+
+A critical section is a part of a program where shared resources are
+accessed. Mutual exclusion ensures that only one process or thread
+executes a critical section at a time.
+
+A deadlock is a situation where processes are permanently waiting for
+resources held by each other.
+
+The four necessary conditions for deadlock are mutual exclusion,
+hold and wait, no preemption, and circular wait.
+
+Synchronization mechanisms such as mutexes, semaphores, and monitors
+can be used to coordinate concurrent processes and threads.
