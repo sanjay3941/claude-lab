@@ -8,7 +8,20 @@ from fastmcp import FastMCP
 from knowledge import load_documents
 from retrieval import retrieve_topic_content, retrieve_relevant_chunks
 
-mcp = FastMCP("Claude Lab")
+SERVER_INSTRUCTIONS = """
+Claude Lab helps students learn from their study materials and recorded practice history.
+Use search_knowledge for focused factual questions about the student's materials.
+Use get_topic_content when the student wants to learn, review, or be taught a topic.
+Use get_progress for questions about current performance. Use get_learning_recommendation
+when the student asks what to study or practice next or asks about weak topics.
+Use record_practice when the student reports a completed practice result. Use updated
+progress for future recommendations. Never invent or assume performance data.
+Stay grounded in retrieved study material when teaching, and distinguish general
+explanations from information retrieved from the student's materials. Call only the
+single tool needed for the request.
+"""
+
+mcp = FastMCP("Claude Lab", instructions=SERVER_INSTRUCTIONS)
 
 
 @mcp.tool
