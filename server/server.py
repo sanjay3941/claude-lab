@@ -14,8 +14,11 @@ mcp = FastMCP("Claude Lab")
 @mcp.tool
 def search_knowledge(query: str) -> str:
     """
-    Search the student's study materials for relevant information.
+    Search the student's study materials for specific information.
+    Use this tool when the student asks a focused factual question.
     """
+    print(f"[TOOL] search_knowledge query={query}")
+
     documents = load_documents()
 
     results = retrieve_relevant_chunks(
@@ -43,8 +46,12 @@ def search_knowledge(query: str) -> str:
 @mcp.tool
 def get_topic_content(topic: str) -> str:
     """
-    Retrieve broader study material for a specific topic.
+    Retrieve broader study material for a topic.
+    Use this tool when the student wants to learn, review, or practice a topic.
+    Use the returned material as the source for explanations and practice questions.
     """
+    print(f"[TOOL] get_topic_content topic={topic}")
+
     documents = load_documents()
 
     results = retrieve_topic_content(
@@ -76,7 +83,9 @@ def record_practice(
     total: int,
 ) -> str:
     """
-    Record a student's practice result for a topic.
+    Record the result of a completed practice session.
+    Use this tool when the student provides a score or result and asks Claude to
+    record it. Do not invent or assume a score.
     """
     print(
         f"[TOOL] record_practice "
@@ -109,7 +118,9 @@ def record_practice(
 @mcp.tool
 def get_progress() -> str:
     """
-    Get the student's learning progress across topics.
+    Retrieve the student's accumulated practice performance.
+    Use this tool when the student asks about their progress, performance, or
+    accuracy.
     """
     print("[TOOL] get_progress")
 
@@ -135,6 +146,8 @@ def get_progress() -> str:
 def get_weak_topics() -> str:
     """
     Identify topics where the student's accuracy is below 70%.
+    Use this tool when the student asks what to study next, where they are weak,
+    or what needs more practice.
     """
     print("[TOOL] get_weak_topics")
 
