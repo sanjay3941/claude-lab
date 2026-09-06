@@ -14,8 +14,11 @@ mcp = FastMCP("Claude Lab")
 @mcp.tool
 def search_knowledge(query: str) -> str:
     """
-    Search the student's study materials for specific information.
-    Use this tool when the student asks a focused factual question.
+    Search the student's study materials for a focused factual question.
+    Call this tool before answering when the student asks for an answer based on
+    their materials or mentions "my study materials," "my notes," "my course
+    material," or similar. Treat the returned content as the source of truth for
+    the student's materials; do not rely solely on general model knowledge.
     """
     print(f"[TOOL] search_knowledge query={query}")
 
@@ -46,9 +49,12 @@ def search_knowledge(query: str) -> str:
 @mcp.tool
 def get_topic_content(topic: str) -> str:
     """
-    Retrieve broader study material for a topic.
-    Use this tool when the student wants to learn, review, or practice a topic.
-    Use the returned material as the source for explanations and practice questions.
+    Retrieve broader context from the student's study materials for a topic.
+    Use this tool when the student wants to learn, review, understand, or
+    practice a topic using their materials. Use the returned material as the
+    basis for explanations and practice questions.
+    Use search_knowledge for focused factual questions; use this tool for
+    broader learning, review, and explanation of a topic.
     """
     print(f"[TOOL] get_topic_content topic={topic}")
 
