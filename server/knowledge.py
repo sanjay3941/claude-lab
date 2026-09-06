@@ -2,55 +2,96 @@ from pathlib import Path
 
 import pymupdf
 
+from retrieval import retrieve_relevant_chunks
+
 
 KNOWLEDGE_DIR = Path(__file__).parent.parent / "knowledge"
 
 
-def search_local_knowledge(query: str) -> str:
-    """Search study materials for pages or text containing the query."""
+def load_documents() -> list[dict]:
+    """Load all supported study documents."""
 
-    query = query.lower().strip()
+    documents = []
+
+    # Load PDF documents
+    for pdf_path in KNOWLEDGE_DIR.rglob("*.pdf"):
+        try:
+            with pymupdf.open(pdf_path) as document:
+
+                for page_number, page in enumerate(document):
+
+                    text = page.get_text()
+
+                    if text.strip():
+                        documents.append(
+                            {
+                                "source": (
+                                    f"{pdf_path.name} "
+                                    f"- Page {page_number + 1}"
+                                ),
+                                "text": text,
+                            }
+                        )
+
+        except Exception as error:
+
+            print(
+                f"Error reading {pdf_path.name}: {error}"
+            )
+
+    # Load TXT documents
+    for text_path in KNOWLEDGE_DIR.rglob("*.txt"):
+        try:
+
+            text = text_path.read_text(
+                encoding="utf-8"
+            )
+
+            if text.strip():
+                documents.append(
+                    {
+                        "source": text_path.name,
+                        "text": text,
+                    }
+                )
+
+        except Exception as error:
+
+            print(
+                f"Error reading {text_path.name}: {error}"
+            )
+
+    return documents
+
+
+def search_local_knowledge(query: str) -> str:
+    """Search study materials and return relevant chunks."""
+
+    query = query.strip()
 
     if not query:
         return "Please provide a search query."
 
-    results = []
+    documents = load_documents()
 
-    # Search PDF files
-    for pdf_path in KNOWLEDGE_DIR.rglob("*.pdf"):
-        try:
-            with pymupdf.open(pdf_path) as document:
-                for page_number, page in enumerate(document):
-                    text = page.get_text()
-
-                    if query in text.lower():
-                        results.append(
-                            f"\n[{pdf_path.name} - Page {page_number + 1}]\n"
-                            f"{text[:2000]}"
-                        )
-
-        except Exception as error:
-            results.append(
-                f"[Error reading {pdf_path.name}: {error}]"
-            )
-
-    # Search text files
-    for text_path in KNOWLEDGE_DIR.rglob("*.txt"):
-        try:
-            text = text_path.read_text(encoding="utf-8")
-
-            if query in text.lower():
-                results.append(
-                    f"\n[{text_path.name}]\n"
-                    f"{text[:2000]}"
-                )
-
-        except Exception as error:
-            results.append(
-                f"[Error reading {text_path.name}: {error}]"
-            )
+    results = retrieve_relevant_chunks(
+        query=query,
+        documents=documents,
+        top_k=5,
+    )
 
     if not results:
-        return f"No results found for: {query}"
+        return f"No relevant results found for: {query}"
 
-    return "\n".join(results[:5])
+    output = []
+
+    for result in results:
+
+        output.append(
+            f"\n[{result['source']} "
+            f"- Chunk {result['chunk']} "
+            f"| relevance={result['score']}]\n"
+            f"{result['text']}"
+        )
+
+    return "\n".join(output)
