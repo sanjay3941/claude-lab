@@ -152,8 +152,10 @@ def get_progress() -> str:
 def get_weak_topics() -> str:
     """
     Identify topics where the student's accuracy is below 70%.
-    Use this tool when the student asks what to study next, where they are weak,
-    or what needs more practice.
+    Call this tool whenever the student asks about weak topics, topics they are
+    struggling with, what they should study next, what needs more practice, or
+    which topics have low accuracy. Query this tool instead of inferring weak
+    topics from memory or from the absence of visible progress data.
     """
     print("[TOOL] get_weak_topics")
 
