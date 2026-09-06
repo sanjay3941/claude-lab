@@ -78,6 +78,10 @@ def record_practice(
     """
     Record a student's practice result for a topic.
     """
+    print(
+        f"[TOOL] record_practice "
+        f"topic={topic} correct={correct} total={total}"
+    )
 
     if total <= 0:
         return "Total questions must be greater than 0."
@@ -107,6 +111,7 @@ def get_progress() -> str:
     """
     Get the student's learning progress across topics.
     """
+    print("[TOOL] get_progress")
 
     progress = get_learning_progress()
 
@@ -131,6 +136,7 @@ def get_weak_topics() -> str:
     """
     Identify topics where the student's accuracy is below 70%.
     """
+    print("[TOOL] get_weak_topics")
 
     weak_topics = find_weak_topics()
 
