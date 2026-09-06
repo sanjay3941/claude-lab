@@ -3,7 +3,6 @@ from learning import recommend_next_topic
 from progress import (
     record_practice_result as save_practice_result,
     get_learning_progress,
-    get_weak_topics as find_weak_topics,
 )
 from fastmcp import FastMCP
 from knowledge import load_documents
@@ -151,24 +150,43 @@ def get_progress() -> str:
 
 
 @mcp.tool
-def get_next_recommendation() -> str:
+def get_learning_recommendation() -> str:
     """
-    Recommend the next topic and practice strategy based on the student's
-    recorded practice history. Call this tool when the student asks what they
-    should study or practice next. Use the student's actual recorded progress
-    to make the recommendation. Do not invent or assume progress data.
+    Use this tool when the student asks which topics are weak or what they
+    should study or practice next. The recommendation is based on recorded
+    practice history. Do not invent or assume progress data.
     """
-    print("[TOOL] get_next_recommendation")
+    print("[TOOL] get_learning_recommendation")
 
     progress = get_learning_progress()
+
+    if not progress:
+        return (
+            "There is not enough practice data to make a learning "
+            "recommendation."
+        )
+
+    weak_topics = sorted(
+        (
+            (topic, data["accuracy"])
+            for topic, data in progress.items()
+            if data["accuracy"] < 70
+        ),
+        key=lambda item: (item[1], item[0]),
+    )
     recommendation = recommend_next_topic(progress)
-
-    if recommendation["topic"] is None:
-        return "There is not enough practice data to recommend a next topic."
-
     strategy = recommendation["strategy"]
 
+    if weak_topics:
+        weak_output = "\n".join(
+            f"- {topic}: {accuracy}%"
+            for topic, accuracy in weak_topics
+        )
+    else:
+        weak_output = "None"
+
     return (
+        f"Weak topics:\n{weak_output}\n\n"
         f"Recommended topic: {recommendation['topic']}\n"
         f"Current accuracy: {recommendation['accuracy']}%\n"
         f"Recommended level: {strategy['level']}\n"
@@ -176,33 +194,6 @@ def get_next_recommendation() -> str:
         f"Difficulty: {strategy['difficulty']}\n"
         f"Focus: {strategy['focus']}"
     )
-
-@mcp.tool
-def get_weak_topics() -> str:
-    """
-    Identify topics where the student's accuracy is below 70%.
-    Call this tool when the student asks which topics are weak, which topics they
-    are struggling with, or which topics have low accuracy. Query the student's
-    actual practice data rather than inferring weaknesses from memory.
-    """
-    print("[TOOL] get_weak_topics")
-
-    weak_topics = find_weak_topics()
-
-    if not weak_topics:
-        return "No weak topics identified."
-
-    output = ["Topics needing more practice:"]
-
-    for topic in weak_topics:
-        output.append(
-            f"\nTopic: {topic['topic']}\n"
-            f"Accuracy: {topic['accuracy']}%\n"
-            f"Attempts: {topic['attempts']}\n"
-            f"Correct: {topic['correct']}/{topic['total']}"
-        )
-
-    return "\n".join(output)
 if __name__ == "__main__":
     host = os.environ.get("HOST", "127.0.0.1")
     port = int(os.environ.get("PORT", "8000"))
