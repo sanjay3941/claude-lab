@@ -1,4 +1,5 @@
 import os
+from learning import recommend_next_topic
 from progress import (
     record_practice_result as save_practice_result,
     get_learning_progress,
@@ -147,6 +148,34 @@ def get_progress() -> str:
         )
 
     return "\n".join(output)
+
+
+@mcp.tool
+def get_next_recommendation() -> str:
+    """
+    Recommend the next topic and practice strategy based on the student's
+    recorded practice history. Use this tool when the student asks what they
+    should study or practice next. Use get_weak_topics when the student only
+    asks which topics are weak. Do not invent or assume progress data.
+    """
+    print("[TOOL] get_next_recommendation")
+
+    progress = get_learning_progress()
+    recommendation = recommend_next_topic(progress)
+
+    if recommendation["topic"] is None:
+        return "There is not enough practice data to recommend a next topic."
+
+    strategy = recommendation["strategy"]
+
+    return (
+        f"Recommended topic: {recommendation['topic']}\n"
+        f"Current accuracy: {recommendation['accuracy']}%\n"
+        f"Recommended level: {strategy['level']}\n"
+        f"Questions: {strategy['questions']}\n"
+        f"Difficulty: {strategy['difficulty']}\n"
+        f"Focus: {strategy['focus']}"
+    )
 
 @mcp.tool
 def get_weak_topics() -> str:
