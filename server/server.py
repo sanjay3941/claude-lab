@@ -1,7 +1,13 @@
 import os
+from json import JSONDecodeError
+
+from starlette.requests import Request
+from starlette.responses import JSONResponse
+
 from learning import recommend_next_topic
 from progress import (
     record_practice_result as save_practice_result,
+    get_weak_topics,
     get_learning_progress,
 )
 from fastmcp import FastMCP
@@ -9,20 +15,143 @@ from knowledge import load_documents
 from retrieval import retrieve_topic_content, retrieve_relevant_chunks
 
 SERVER_INSTRUCTIONS = """
-Claude Lab helps students learn from their study materials and recorded practice history.
-Use search_knowledge for focused factual questions about the student's materials.
-Use get_topic_content when the student wants to learn, review, or be taught a topic.
-Use get_progress for questions about current performance. Use get_learning_recommendation
-when the student asks what to study or practice next or asks about weak topics.
-Use record_practice when the student reports a completed practice result. Use updated
-progress for future recommendations. Never invent or assume performance data.
-Stay grounded in retrieved study material when teaching, and distinguish general
-explanations from information retrieved from the student's materials. Call only the
-single tool needed for the request.
+You are Claude Lab, a course-grounded learning assistant.
+
+Learning and factual questions:
+- Use get_topic_content when the student wants to learn, review, or be taught
+  a topic. Ground the explanation in the retrieved course material and clearly
+  distinguish that material from general knowledge.
+- Use search_knowledge for focused factual questions about the student's study
+  materials.
+
+Practice:
+- When the student asks to practice or requests practice questions, first call
+  get_topic_content for the requested topic.
+- Use the retrieved material as the primary source. Generate and evaluate
+  questions yourself; the MCP server does not call an LLM.
+- Do not claim course support for a question unless the retrieved material
+  supports it. Ask questions interactively when appropriate.
+
+Progress and recording:
+- After a completed practice session, use record_practice only when the
+  student's actual correct and total results are known. Never invent, estimate,
+  or assume a score.
+- Use get_progress for current performance questions and never invent progress
+  data.
+- Use get_learning_recommendation for next-study, next-practice, or weak-topic
+  questions. Base the response on the progress returned by the tool.
+
+Workflow and grounding:
+- Call tools sequentially when genuinely required, for example:
+  get_topic_content -> teach or practice -> record_practice ->
+  get_learning_recommendation.
+- Use the smallest number of tools necessary and do not repeat a tool call when
+  the requested information is already available.
+- Never fabricate course content, progress, practice history, or sources. If
+  the knowledge base is insufficient, say so plainly.
 """
 
 mcp = FastMCP("Claude Lab", instructions=SERVER_INSTRUCTIONS)
+def _api_response(payload: dict, status_code: int = 200) -> JSONResponse:
+    """Return a browser-friendly response for the Student Lab API."""
+    response = JSONResponse(payload, status_code=status_code)
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    return response
 
+
+def _recommendation_payload() -> dict:
+    """Build structured recommendation data from the existing learning logic."""
+    progress = get_learning_progress()
+    if not progress:
+        return {
+            "available": False,
+            "weak_topics": [],
+            "recommendation": None,
+        }
+
+    recommendation = recommend_next_topic(progress)
+    return {
+        "available": True,
+        "weak_topics": get_weak_topics(),
+        "recommendation": recommendation,
+    }
+
+
+@mcp.custom_route("/api/progress", methods=["GET"])
+async def api_progress(_: Request) -> JSONResponse:
+    return _api_response({"progress": get_learning_progress()})
+
+
+@mcp.custom_route("/api/recommendation", methods=["GET"])
+async def api_recommendation(_: Request) -> JSONResponse:
+    return _api_response(_recommendation_payload())
+
+
+@mcp.custom_route("/api/topic/{topic:path}", methods=["GET"])
+async def api_topic(request: Request) -> JSONResponse:
+    topic = request.path_params["topic"].strip()
+    if not topic:
+        return _api_response({"error": "A topic is required."}, 400)
+
+    documents = load_documents()
+    results = retrieve_topic_content(topic=topic, documents=documents, top_k=8)
+    return _api_response(
+        {
+            "topic": topic,
+            "found": bool(results),
+            "content": results,
+        }
+    )
+
+
+@mcp.custom_route("/api/practice", methods=["POST", "OPTIONS"])
+async def api_practice(request: Request) -> JSONResponse:
+    if request.method == "OPTIONS":
+        return _api_response({})
+
+    try:
+        payload = await request.json()
+    except JSONDecodeError:
+        return _api_response({"error": "Request body must be valid JSON."}, 400)
+
+    topic = payload.get("topic")
+    correct = payload.get("correct")
+    total = payload.get("total")
+    if (
+        not isinstance(topic, str)
+        or not topic.strip()
+        or not isinstance(correct, int)
+        or isinstance(correct, bool)
+        or not isinstance(total, int)
+        or isinstance(total, bool)
+    ):
+        return _api_response(
+            {"error": "topic, correct, and total must be valid values."},
+            400,
+        )
+
+    if total <= 0:
+        return _api_response({"error": "Total questions must be greater than 0."}, 400)
+    if correct < 0 or correct > total:
+        return _api_response(
+            {"error": "Correct answers must be between 0 and total."},
+            400,
+        )
+
+    result = save_practice_result(topic=topic.strip(), correct=correct, total=total)
+    return _api_response(
+        {
+            "message": f"Practice result recorded for {topic.strip()}.",
+            "latest": {"correct": correct, "total": total},
+            "topic_progress": {
+                **result,
+                "accuracy": round((result["correct"] / result["total"]) * 100, 1),
+            },
+        },
+        201,
+    )
 
 @mcp.tool
 def search_knowledge(query: str) -> str:
