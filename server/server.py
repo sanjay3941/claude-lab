@@ -154,9 +154,9 @@ def get_progress() -> str:
 def get_next_recommendation() -> str:
     """
     Recommend the next topic and practice strategy based on the student's
-    recorded practice history. Use this tool when the student asks what they
-    should study or practice next. Use get_weak_topics when the student only
-    asks which topics are weak. Do not invent or assume progress data.
+    recorded practice history. Call this tool when the student asks what they
+    should study or practice next. Use the student's actual recorded progress
+    to make the recommendation. Do not invent or assume progress data.
     """
     print("[TOOL] get_next_recommendation")
 
@@ -181,10 +181,9 @@ def get_next_recommendation() -> str:
 def get_weak_topics() -> str:
     """
     Identify topics where the student's accuracy is below 70%.
-    Call this tool whenever the student asks about weak topics, topics they are
-    struggling with, what they should study next, what needs more practice, or
-    which topics have low accuracy. Query this tool instead of inferring weak
-    topics from memory or from the absence of visible progress data.
+    Call this tool when the student asks which topics are weak, which topics they
+    are struggling with, or which topics have low accuracy. Query the student's
+    actual practice data rather than inferring weaknesses from memory.
     """
     print("[TOOL] get_weak_topics")
 
