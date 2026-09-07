@@ -2,7 +2,7 @@ import os
 from json import JSONDecodeError
 
 from starlette.requests import Request
-from starlette.responses import JSONResponse
+from starlette.responses import FileResponse, JSONResponse
 
 from learning import recommend_next_topic
 from progress import (
@@ -337,11 +337,24 @@ def get_learning_recommendation() -> str:
         f"Focus: {strategy['focus']}"
     )
 if __name__ == "__main__":
+    import uvicorn
+    from starlette.staticfiles import StaticFiles
+
     host = os.environ.get("HOST", "127.0.0.1")
     port = int(os.environ.get("PORT", "8000"))
 
-    mcp.run(
-        transport="http",
-        host=host,
-        port=port,
+    app = mcp.http_app()
+
+    frontend_dist = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)),
+        "frontend",
+        "dist",
     )
+
+    app.mount(
+        "/",
+        StaticFiles(directory=frontend_dist, html=True),
+        name="frontend",
+    )
+
+    uvicorn.run(app, host=host, port=port)
