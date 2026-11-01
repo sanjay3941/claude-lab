@@ -1,13 +1,6 @@
 from learning import get_practice_strategy, recommend_next_topic
 
 
-def test_recommend_next_topic_with_empty_progress():
-    result = recommend_next_topic({})
-
-    assert result["topic"] is None
-    assert result["strategy"] is None
-
-
 def test_recommend_next_topic_selects_lowest_accuracy():
     progress = {
         "operating systems": {"accuracy": 80},
@@ -20,25 +13,6 @@ def test_recommend_next_topic_selects_lowest_accuracy():
     assert result["topic"] == "deadlocks"
     assert result["accuracy"] == progress["deadlocks"]["accuracy"]
     assert result["strategy"] == get_practice_strategy(result["accuracy"])
-
-
-test_cases = [
-    40,
-    60,
-    80,
-    90,
-]
-
-
-for accuracy in test_cases:
-
-    strategy = get_practice_strategy(accuracy)
-
-    print(f"\nAccuracy: {accuracy}%")
-    print(f"Level: {strategy['level']}")
-    print(f"Questions: {strategy['questions']}")
-    print(f"Difficulty: {strategy['difficulty']}")
-    print(f"Focus: {strategy['focus']}")
 
 
 def test_recommend_next_topic_empty_progress():
@@ -62,3 +36,10 @@ def test_recommend_next_topic_with_multiple_topics():
     assert result["strategy"]["level"] == "foundational"
     assert result["strategy"]["difficulty"] == "easy"
     assert result["strategy"]["questions"] == 5
+
+
+def test_get_practice_strategy_buckets():
+    assert get_practice_strategy(40)["level"] == "foundational"
+    assert get_practice_strategy(60)["level"] == "targeted"
+    assert get_practice_strategy(80)["level"] == "mixed"
+    assert get_practice_strategy(90)["level"] == "advanced"

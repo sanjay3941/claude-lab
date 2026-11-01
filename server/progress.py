@@ -1,4 +1,5 @@
 import json
+from json import JSONDecodeError
 from pathlib import Path
 
 
@@ -11,8 +12,51 @@ def load_progress() -> dict:
     if not PROGRESS_FILE.exists():
         return {"topics": {}}
 
-    with open(PROGRESS_FILE, "r", encoding="utf-8") as file:
-        return json.load(file)
+    try:
+        with open(PROGRESS_FILE, "r", encoding="utf-8") as file:
+            progress = json.load(file)
+    except (JSONDecodeError, OSError):
+        return {"topics": {}}
+
+    if not isinstance(progress, dict):
+        return {"topics": {}}
+
+    topics = progress.get("topics")
+    if not isinstance(topics, dict):
+        return {"topics": {}}
+
+    sanitized_topics = {}
+    for topic, data in topics.items():
+        if not isinstance(topic, str) or not topic.strip():
+            continue
+        if not isinstance(data, dict):
+            continue
+
+        attempts = data.get("attempts", 0)
+        correct = data.get("correct", 0)
+        total = data.get("total", 0)
+
+        if (
+            not isinstance(attempts, int)
+            or isinstance(attempts, bool)
+            or attempts < 0
+            or not isinstance(correct, int)
+            or isinstance(correct, bool)
+            or correct < 0
+            or not isinstance(total, int)
+            or isinstance(total, bool)
+            or total < 0
+            or correct > total
+        ):
+            continue
+
+        sanitized_topics[topic.strip()] = {
+            "attempts": attempts,
+            "correct": correct,
+            "total": total,
+        }
+
+    return {"topics": sanitized_topics}
 
 
 def save_progress(progress: dict) -> None:
